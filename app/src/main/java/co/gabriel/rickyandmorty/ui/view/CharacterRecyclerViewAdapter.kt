@@ -30,6 +30,14 @@ class CharacterRecyclerViewAdapter(
     }
 
     private var basket = Basket()
+    private val allCharacters = mutableListOf<Character>()
+
+
+    init {
+        allCharacters.addAll(
+            items.filterIsInstance<CharacterListItem.CharacterItem>().map { it.character }
+        )
+    }
 
     override fun getItemViewType(position: Int): Int {
         return when (items[position]) {
@@ -148,8 +156,28 @@ class CharacterRecyclerViewAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     fun updateCharacters(newCharacters: MutableList<Character>) {
-        this.items = buildSectionedList(newCharacters)
+        allCharacters.clear()
+        allCharacters.addAll(newCharacters)
+        this.items = buildSectionedList(allCharacters)
         notifyDataSetChanged()
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun filter(query: String) {
+        val filtered = if (query.isBlank()) {
+            allCharacters
+        } else {
+            allCharacters.filter {
+                it.name.contains(query, ignoreCase = true)
+            }
+        }
+        this.items = buildSectionedList(filtered)
+        notifyDataSetChanged()
+        updateTotal()
+    }
+
+    fun hasResults(): Boolean {
+        return items.any { it is CharacterListItem.CharacterItem }
     }
 
     private fun buildSectionedList(characters: List<Character>): MutableList<CharacterListItem> {

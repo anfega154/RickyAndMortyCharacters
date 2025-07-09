@@ -18,6 +18,8 @@ import co.gabriel.rickyandmorty.util.Constants.BASKET
 import co.gabriel.rickyandmorty.util.Constants.ERROR_BASKET_EMPTY
 import co.gabriel.rickyandmorty.util.Constants.TYPE_VIEW_CHARACTER
 import co.gabriel.rickyandmorty.data.model.Character
+import android.text.Editable
+import android.text.TextWatcher
 
 class CharacterListFragment : BaseFragment() {
 
@@ -39,6 +41,7 @@ class CharacterListFragment : BaseFragment() {
 
         setupViewModel()
         setupRecyclerView()
+        setupSearchLubbaAndDub()
         setupBasketButton()
 
         val basket = arguments.getSerializableCompat(BASKET, Basket::class.java) ?: Basket()
@@ -54,12 +57,27 @@ class CharacterListFragment : BaseFragment() {
     }
 
     private fun setupRecyclerView() {
-        characterAdapter =
-            CharacterRecyclerViewAdapter(mutableListOf(), binding.tvTotalPrice, TYPE_VIEW_CHARACTER)
+        characterAdapter = CharacterRecyclerViewAdapter(
+            mutableListOf(),
+            binding.tvTotalPrice,
+            TYPE_VIEW_CHARACTER
+        )
         binding.characterListRecycle.apply {
             adapter = characterAdapter
             layoutManager = LinearLayoutManager(context)
         }
+    }
+
+    private fun setupSearchLubbaAndDub() {
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s?.toString() ?: ""
+                characterAdapter.filter(query)
+                binding.tvNoResults.visibility = if (characterAdapter.hasResults()) View.GONE else View.VISIBLE
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun setupBasketButton() {
@@ -78,7 +96,10 @@ class CharacterListFragment : BaseFragment() {
 
     private fun renderState(screenState: ScreenState<List<Character>>) {
         when (screenState) {
-            is ScreenState.Render -> screenState.data?.let { characterAdapter.updateCharacters(it.toMutableList()) }
+            is ScreenState.Render -> screenState.data?.let {
+                characterAdapter.updateCharacters(it.toMutableList())
+                binding.tvNoResults.visibility = if (characterAdapter.hasResults()) View.GONE else View.VISIBLE
+            }
             is ScreenState.Error -> showError(screenState.message)
             is ScreenState.Loading -> showLoading()
         }
@@ -89,3 +110,4 @@ class CharacterListFragment : BaseFragment() {
         _binding = null
     }
 }
+
