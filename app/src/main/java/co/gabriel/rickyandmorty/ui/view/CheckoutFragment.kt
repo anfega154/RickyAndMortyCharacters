@@ -1,11 +1,11 @@
 package co.gabriel.rickyandmorty.ui.view
 
-import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.addCallback
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import co.gabriel.rickyandmorty.R
@@ -13,15 +13,15 @@ import co.gabriel.rickyandmorty.data.model.Basket
 import co.gabriel.rickyandmorty.databinding.FragmentCheckoutBinding
 import co.gabriel.rickyandmorty.ui.viewmodel.CheckoutViewModel
 import co.gabriel.rickyandmorty.util.Constants.BASKET
-import co.gabriel.rickyandmorty.util.Constants.ERROR_PAY
 import co.gabriel.rickyandmorty.util.Constants.TYPE_VIEW_CHECKOUT
 
 class CheckoutFragment : BaseFragment() {
+
     private lateinit var viewModel: CheckoutViewModel
     private var _binding: FragmentCheckoutBinding? = null
     private val binding get() = _binding!!
     private lateinit var characterAdapter: CharacterRecyclerViewAdapter
-    private var basket: Basket = Basket()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -30,55 +30,52 @@ class CheckoutFragment : BaseFragment() {
         return binding.root
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(this)[CheckoutViewModel::class.java]
-        kotlin.runCatching {
-            basket = arguments?.getSerializable(BASKET) as Basket
-            viewModel.listaBasket(basket)
-        }
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel = ViewModelProvider(this)[CheckoutViewModel::class.java]
+
         characterAdapter = CharacterRecyclerViewAdapter(
-            mutableListOf(), binding.tvTotalPrice,
-            TYPE_VIEW_CHECKOUT
+            mutableListOf(), binding.tvTotalPrice, TYPE_VIEW_CHECKOUT
         )
 
-        binding.characterListRecycle.apply {
-            adapter = characterAdapter
-            layoutManager = LinearLayoutManager(context)
-        }
+        binding.characterListRecycle.layoutManager = LinearLayoutManager(context)
+        binding.characterListRecycle.adapter = characterAdapter
+
+        val basket = arguments.getSerializableCompat(BASKET, Basket::class.java) ?: Basket()
+
+        viewModel.initialize(basket)
 
         binding.btnGoBack.setOnClickListener {
-            goToCharcterListFragment()
+            viewModel.onGoBackClick(characterAdapter.getBasket())
         }
 
         binding.btnPay.setOnClickListener {
-            showError(ERROR_PAY)
+            viewModel.onPayClick()
         }
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            goToCharcterListFragment()
+            viewModel.onGoBackClick(characterAdapter.getBasket())
         }
 
-        viewModel.listCharacterModel.observe(viewLifecycleOwner) { listCharacter ->
-            this.basket.listcharacters = listCharacter
-            characterAdapter.updateCharacters(listCharacter)
+        viewModel.listCharacterModel.observe(viewLifecycleOwner) {
+            characterAdapter.updateCharacters(it)
         }
 
-        viewModel.listBasket.observe(viewLifecycleOwner) { basket ->
-            val bundle = Bundle()
-            bundle.putSerializable(BASKET, basket)
+        viewModel.navigateBackWithBasket.observe(viewLifecycleOwner) { updatedBasket ->
+            val bundle = Bundle().apply { putSerializable(BASKET, updatedBasket) }
             findNavController().navigate(
                 R.id.action_checkoutFragment_to_CharacterListFragment, bundle
             )
         }
+
+        viewModel.showErrorEvent.observe(viewLifecycleOwner) {
+            showError(it)
+        }
     }
 
-    private fun goToCharcterListFragment() {
-        viewModel.getBasket(characterAdapter.getBasket())
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

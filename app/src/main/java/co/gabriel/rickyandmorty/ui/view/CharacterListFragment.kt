@@ -1,24 +1,23 @@
 package co.gabriel.rickyandmorty.ui.view
 
-import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import co.gabriel.rickyandmorty.core.provideCharacterRepository
-import co.gabriel.rickyandmorty.data.model.Character
-import co.gabriel.rickyandmorty.databinding.CharacterListFragmentBinding
-import co.gabriel.rickyandmorty.data.model.ScreenState
-import co.gabriel.rickyandmorty.ui.viewmodel.CharacterListViewModel
-import co.gabriel.rickyandmorty.ui.viewmodel.CharacterListViewModelFactory
 import androidx.navigation.fragment.findNavController
 import co.gabriel.rickyandmorty.R
+import co.gabriel.rickyandmorty.core.provideCharacterRepository
 import co.gabriel.rickyandmorty.data.model.Basket
+import co.gabriel.rickyandmorty.data.model.ScreenState
+import co.gabriel.rickyandmorty.databinding.CharacterListFragmentBinding
+import co.gabriel.rickyandmorty.ui.viewmodel.CharacterListViewModel
+import co.gabriel.rickyandmorty.ui.viewmodel.CharacterListViewModelFactory
 import co.gabriel.rickyandmorty.util.Constants.BASKET
 import co.gabriel.rickyandmorty.util.Constants.ERROR_BASKET_EMPTY
 import co.gabriel.rickyandmorty.util.Constants.TYPE_VIEW_CHARACTER
+import co.gabriel.rickyandmorty.data.model.Character
 
 class CharacterListFragment : BaseFragment() {
 
@@ -38,69 +37,55 @@ class CharacterListFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        context?.apply {
+        setupViewModel()
+        setupRecyclerView()
+        setupBasketButton()
 
-            val factory =
-                CharacterListViewModelFactory(
-                    characterRepository = provideCharacterRepository(),
-                )
-            viewModel = ViewModelProvider(
-                owner = this@CharacterListFragment,
-                factory = factory
-            )[CharacterListViewModel::class.java]
-            viewModel.findCharacters().observe(viewLifecycleOwner, Observer(::renderState))
+        val basket = arguments.getSerializableCompat(BASKET, Basket::class.java) ?: Basket()
 
-        }
+        viewModel.findCharacters(basket = basket)
 
+        viewModel.screenState.observe(viewLifecycleOwner, ::renderState)
+    }
+
+    private fun setupViewModel() {
+        val factory = CharacterListViewModelFactory(requireContext().provideCharacterRepository())
+        viewModel = ViewModelProvider(this, factory)[CharacterListViewModel::class.java]
+    }
+
+    private fun setupRecyclerView() {
         characterAdapter =
             CharacterRecyclerViewAdapter(mutableListOf(), binding.tvTotalPrice, TYPE_VIEW_CHARACTER)
-
         binding.characterListRecycle.apply {
             adapter = characterAdapter
             layoutManager = LinearLayoutManager(context)
         }
-
-        binding.btnBasket.setOnClickListener {
-            if (characterAdapter.getBasket().listcharacters.isNotEmpty()) {
-                val bundle = Bundle()
-                bundle.putSerializable(BASKET, characterAdapter.getBasket())
-                findNavController().navigate(
-                    R.id.action_CharacterListFragment_to_checkoutFragment,
-                    bundle
-                )
-            } else showError(ERROR_BASKET_EMPTY)
-        }
-
     }
 
-    private fun renderState(screenState: ScreenState<Any>) {
+    private fun setupBasketButton() {
+        binding.btnBasket.setOnClickListener {
+            val basket = characterAdapter.getBasket()
+            if (basket.listcharacters.isNotEmpty()) {
+                val bundle = Bundle().apply { putSerializable(BASKET, basket) }
+                findNavController().navigate(
+                    R.id.action_CharacterListFragment_to_checkoutFragment, bundle
+                )
+            } else {
+                showError(ERROR_BASKET_EMPTY)
+            }
+        }
+    }
+
+    private fun renderState(screenState: ScreenState<List<Character>>) {
         when (screenState) {
-            is ScreenState.Render -> showTeams(screenState.data as MutableList<Character>)
+            is ScreenState.Render -> screenState.data?.let { characterAdapter.updateCharacters(it.toMutableList()) }
             is ScreenState.Error -> showError(screenState.message)
             is ScreenState.Loading -> showLoading()
         }
     }
 
-    private fun showTeams(list: MutableList<Character>) {
-        characterAdapter.updateCharacters(valiteBasketList(list))
-    }
-
-    private fun valiteBasketList(list: MutableList<Character>): MutableList<Character> {
-        val basketList = arguments?.getSerializable(BASKET) as? Basket
-        return if (basketList != null) {
-            if (basketList.listcharacters.isNotEmpty()) {
-                val listaAll = basketList.listcharacters + list
-                val characterList = listaAll.distinctBy { it.id }
-                    .groupBy { it.id }
-                    .map {
-                        it.value.maxBy { character ->
-                            basketList.listcharacters.contains(
-                                character
-                            )
-                        }
-                    }
-                characterList as MutableList<Character>
-            } else list
-        } else list
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

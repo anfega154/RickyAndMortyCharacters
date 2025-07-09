@@ -4,17 +4,23 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import co.gabriel.rickyandmorty.data.model.Basket
 import co.gabriel.rickyandmorty.data.model.Character
+import co.gabriel.rickyandmorty.util.Constants.ERROR_PAY
 
 class CheckoutViewModel : ViewModel() {
+
     val listCharacterModel = MutableLiveData<MutableList<Character>>()
-    val listBasket = MutableLiveData<Basket>()
-    fun listaBasket(basket: Basket) {
-        if (basket.listcharacters.isNotEmpty()) listCharacterModel.postValue(basket.listcharacters)
-        else listCharacterModel.postValue(mutableListOf<Character>())
+    val navigateBackWithBasket = MutableLiveData<Basket>()
+    val showErrorEvent = MutableLiveData<String>()
+
+    fun initialize(basket: Basket) {
+        listCharacterModel.postValue(basket.listcharacters.toMutableList())
     }
 
-    fun getBasket(basket: Basket) {
-        if (basket.listcharacters.isNotEmpty()) listBasket.postValue(basket)
-        else listBasket.postValue(Basket())
+    fun onGoBackClick(basket: Basket) {
+        navigateBackWithBasket.postValue(basket)
+    }
+
+    fun onPayClick() {
+        showErrorEvent.postValue(ERROR_PAY)
     }
 }
