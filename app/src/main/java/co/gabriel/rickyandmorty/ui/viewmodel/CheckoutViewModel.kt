@@ -23,4 +23,14 @@ class CheckoutViewModel : ViewModel() {
     fun onPayClick() {
         showErrorEvent.postValue(ERROR_PAY)
     }
+
+    /**
+     * function for testing purposes
+     */
+    fun checkBasketIsEmpty() {
+        if (listCharacterModel.value.isNullOrEmpty()) {
+            navigateBackWithBasket.postValue(Basket())
+        }
+    }
+
 }

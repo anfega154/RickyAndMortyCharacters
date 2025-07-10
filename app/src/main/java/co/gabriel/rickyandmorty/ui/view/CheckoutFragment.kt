@@ -60,6 +60,9 @@ class CheckoutFragment : BaseFragment() {
 
         viewModel.listCharacterModel.observe(viewLifecycleOwner) {
             characterAdapter.updateCharacters(it)
+            if (it.isNullOrEmpty()) {
+                viewModel.onGoBackClick(Basket())
+            }
         }
 
         viewModel.navigateBackWithBasket.observe(viewLifecycleOwner) { updatedBasket ->
@@ -72,6 +75,11 @@ class CheckoutFragment : BaseFragment() {
         viewModel.showErrorEvent.observe(viewLifecycleOwner) {
             showError(it)
         }
+
+        characterAdapter.onBasketEmpty = {
+            viewModel.onGoBackClick(characterAdapter.getBasket())
+        }
+
     }
 
     override fun onDestroyView() {

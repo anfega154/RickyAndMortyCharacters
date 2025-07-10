@@ -41,8 +41,16 @@ class CharacterListFragment : BaseFragment() {
 
         setupViewModel()
         setupRecyclerView()
+        viewModel.searchQuery.observe(viewLifecycleOwner) { query ->
+            if (binding.etSearch.text.toString() != query) {
+                binding.etSearch.setText(query)
+            }
+            characterAdapter.filter(query ?: "")
+        }
+
         setupSearchLubbaAndDub()
         setupBasketButton()
+        clearSearch()
 
         val basket = arguments.getSerializableCompat(BASKET, Basket::class.java) ?: Basket()
 
@@ -73,11 +81,13 @@ class CharacterListFragment : BaseFragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s?.toString() ?: ""
+                viewModel.searchQuery.value = query
                 characterAdapter.filter(query)
                 binding.tvNoResults.visibility = if (characterAdapter.hasResults()) View.GONE else View.VISIBLE
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+
     }
 
     private fun setupBasketButton() {
@@ -98,10 +108,18 @@ class CharacterListFragment : BaseFragment() {
         when (screenState) {
             is ScreenState.Render -> screenState.data?.let {
                 characterAdapter.updateCharacters(it.toMutableList())
-                binding.tvNoResults.visibility = if (characterAdapter.hasResults()) View.GONE else View.VISIBLE
+                binding.tvNoResults.visibility =
+                    if (characterAdapter.hasResults()) View.GONE else View.VISIBLE
             }
+
             is ScreenState.Error -> showError(screenState.message)
             is ScreenState.Loading -> showLoading()
+        }
+    }
+
+    private fun clearSearch() {
+        binding.ivClearSearch.setOnClickListener {
+            binding.etSearch.setText("")
         }
     }
 

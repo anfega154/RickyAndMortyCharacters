@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import co.gabriel.rickyandmorty.R
 import co.gabriel.rickyandmorty.core.doubleToCurrency
@@ -14,6 +15,7 @@ import co.gabriel.rickyandmorty.data.model.Basket
 import co.gabriel.rickyandmorty.data.model.Character
 import co.gabriel.rickyandmorty.data.model.CharacterListItem
 import co.gabriel.rickyandmorty.databinding.CharacterItemBinding
+import co.gabriel.rickyandmorty.util.CharacterDiffCallback
 import co.gabriel.rickyandmorty.util.CharacterPriceCalculator
 import co.gabriel.rickyandmorty.util.Constants.TYPE_VIEW_CHECKOUT
 import com.bumptech.glide.Glide
@@ -31,6 +33,8 @@ class CharacterRecyclerViewAdapter(
 
     private var basket = Basket()
     private val allCharacters = mutableListOf<Character>()
+    var onBasketEmpty: (() -> Unit)? = null
+
 
 
     init {
@@ -49,11 +53,14 @@ class CharacterRecyclerViewAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             VIEW_TYPE_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_section_header, parent, false)
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_section_header, parent, false)
                 SectionHeaderViewHolder(view)
             }
+
             else -> {
-                val binding = CharacterItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                val binding =
+                    CharacterItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
                 CharacterViewHolder(binding)
             }
         }
@@ -64,7 +71,10 @@ class CharacterRecyclerViewAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
             is CharacterListItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
-            is CharacterListItem.CharacterItem -> (holder as CharacterViewHolder).bind(item.character, position)
+            is CharacterListItem.CharacterItem -> (holder as CharacterViewHolder).bind(
+                item.character,
+                position
+            )
         }
     }
 
@@ -75,7 +85,8 @@ class CharacterRecyclerViewAdapter(
         }
     }
 
-    inner class CharacterViewHolder(binding: CharacterItemBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class CharacterViewHolder(binding: CharacterItemBinding) :
+        RecyclerView.ViewHolder(binding.root) {
         val image: ImageView = binding.characterImage
         val name: TextView = binding.characterName
         val price: TextView = binding.tvPrice
@@ -110,12 +121,16 @@ class CharacterRecyclerViewAdapter(
             }
 
             btnDelete.setOnClickListener {
-                // Encuentra índice real
                 val realPosition = adapterPosition
                 items.removeAt(realPosition)
                 updateTotal()
                 notifyItemRemoved(realPosition)
+
+                if (basket.listcharacters.isEmpty()) {
+                    onBasketEmpty?.invoke()
+                }
             }
+
 
             price.text = doubleToCurrency(CharacterPriceCalculator.calculatePrice(character))
             updateTotal()
@@ -154,13 +169,18 @@ class CharacterRecyclerViewAdapter(
             .toMutableList()
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun updateCharacters(newCharacters: MutableList<Character>) {
         allCharacters.clear()
         allCharacters.addAll(newCharacters)
-        this.items = buildSectionedList(allCharacters)
-        notifyDataSetChanged()
+        val newItems = buildSectionedList(allCharacters)
+
+        val diffCallback = CharacterDiffCallback(items, newItems)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+
+        items = newItems
+        diffResult.dispatchUpdatesTo(this)
     }
+
 
     @SuppressLint("NotifyDataSetChanged")
     fun filter(query: String) {

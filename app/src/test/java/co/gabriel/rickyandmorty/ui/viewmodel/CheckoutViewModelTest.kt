@@ -2,12 +2,16 @@ package co.gabriel.rickyandmorty.ui.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import co.gabriel.rickyandmorty.data.model.Basket
-import org.junit.Before
-import org.junit.Test
 import co.gabriel.rickyandmorty.data.model.Character
+import co.gabriel.rickyandmorty.util.Constants.ERROR_PAY
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
+import org.junit.Test
 
-class CheckoutViewModelTes {
+class CheckoutViewModelTest {
 
     private lateinit var checkoutViewModel: CheckoutViewModel
 
@@ -15,49 +19,53 @@ class CheckoutViewModelTes {
     val rule = InstantTaskExecutorRule()
 
     @Before
-    fun onBefore() {
+    fun setup() {
         checkoutViewModel = CheckoutViewModel()
     }
 
     @Test
-    fun `test listBasket with non-empty list`() {
+    fun `initialize should set listCharacterModel with non-empty list`() {
+        val characters = mutableListOf(Character(id = "1", name = "Yenifer", image = "image", status = "status"))
+        val basket = Basket(characters)
 
-        val mutableList:MutableList<Character> = mutableListOf()
-        mutableList.add(Character(id="1", name = "yenifer",image="image", status = "status"))
+        checkoutViewModel.initialize(basket)
 
-        val basket = Basket(listcharacters = mutableList)
-        checkoutViewModel.listaBasket(basket)
-
-        assert(basket.listcharacters == checkoutViewModel.listCharacterModel.value)
+        assertEquals(characters, checkoutViewModel.listCharacterModel.value)
     }
 
     @Test
-    fun `test listBasket with empty list`() {
-        val mutableList:MutableList<Character> = mutableListOf()
-        val basket = Basket(mutableList)
-        checkoutViewModel.listaBasket(basket)
+    fun `initialize should set listCharacterModel with empty list`() {
+        val basket = Basket(mutableListOf())
 
-        assert( mutableListOf<Character>() == checkoutViewModel.listCharacterModel.value)
+        checkoutViewModel.initialize(basket)
+
+        assertTrue(checkoutViewModel.listCharacterModel.value!!.isEmpty())
     }
 
     @Test
-    fun `test getBasket with non-empty list`() {
+    fun `onGoBackClick should post navigateBackWithBasket`() {
+        val characters = mutableListOf(Character(id = "1", name = "Yenifer", image = "image", status = "status"))
+        val basket = Basket(characters)
 
-        val mutableList:MutableList<Character> = mutableListOf()
-        mutableList.add(Character(id="1", name = "yenifer",image="image", status = "status"))
+        checkoutViewModel.onGoBackClick(basket)
 
-        val basket = Basket(listcharacters = mutableList)
-        checkoutViewModel.getBasket(basket)
-
-        assert(basket == checkoutViewModel.listBasket.value)
+        assertEquals(basket, checkoutViewModel.navigateBackWithBasket.value)
     }
 
     @Test
-    fun `test getBasket with empty list`() {
-        val mutableList:MutableList<Character> = mutableListOf()
-        val basket = Basket(mutableList)
-        checkoutViewModel.getBasket(basket)
+    fun `onPayClick should post showErrorEvent`() {
+        checkoutViewModel.onPayClick()
 
-        assert( Basket() == checkoutViewModel.listBasket.value)
+        assertEquals(ERROR_PAY, checkoutViewModel.showErrorEvent.value)
+    }
+
+    @Test
+    fun `checkBasketIsEmpty should navigate back if list is empty`() {
+        checkoutViewModel.listCharacterModel.postValue(mutableListOf())
+
+        checkoutViewModel.checkBasketIsEmpty()
+
+        assertNotNull(checkoutViewModel.navigateBackWithBasket.value)
+        assertTrue(checkoutViewModel.navigateBackWithBasket.value!!.listcharacters.isEmpty())
     }
 }

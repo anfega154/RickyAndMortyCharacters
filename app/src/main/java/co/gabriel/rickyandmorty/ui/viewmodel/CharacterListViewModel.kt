@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 class CharacterListViewModel(private val characterRepository: CharacterRepository) : ViewModel() {
 
     val screenState = MutableLiveData<ScreenState<List<Character>>>()
+    val searchQuery = MutableLiveData<String>("")
 
     fun findCharacters(page: Int = DEFAULT_PAGE, basket: Basket? = null) {
         viewModelScope.launch(Dispatchers.IO) {
